@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 // Modified script from: https://www.youtube.com/watch?v=EPaSmQ2vtek
@@ -27,11 +28,11 @@ public class HexTile : MonoBehaviour
     
     List<Face> faces;
 
-    [SerializeField] Material material;
-    [SerializeField] float innerSize = 1f;
-    [SerializeField] float outerSize = 0f;
-    [SerializeField] float height = 1f;
-    [SerializeField] bool isFlatTopped = false;
+    public Material material;
+    public float innerSize = 1f; // innerRadius
+    public float outerSize = 0f; // outerRadius
+    public float height = 1f;
+    public bool isFlatTopped = false;
  
 
     private void DrawFaces()
@@ -42,7 +43,25 @@ public class HexTile : MonoBehaviour
         // Top faces.
         for(int point = 0; point < 6; point++)
         {
-            faces.Add(CreateFace(innerSize, outerSize, height / 2, height / 2, point));
+            faces.Add(CreateFace(innerSize, outerSize, height, height, point));
+        }
+
+        // Bottom Faces
+        for (int point = 0; point < 6; point++)
+        {
+            faces.Add(CreateFace(innerSize, outerSize, 0, 0, point, true));
+        }
+
+        // Outer Faces
+        for( int point = 0; point < 6; point++)
+        {
+            faces.Add(CreateFace(outerSize, outerSize, height, 0f, point, true));
+        }
+
+        // Inner Faces
+        for (int point = 0; point < 6; point++)
+        {
+            faces.Add(CreateFace(innerSize, innerSize, height, 0f, point, false));
         }
     }
 
@@ -125,5 +144,12 @@ public class HexTile : MonoBehaviour
 
         DrawFaces();
         CombineFaces();
+    }
+
+    public void AddCollider()
+    {
+        MeshCollider collider = this.AddComponent<MeshCollider>();
+        collider.sharedMesh = mesh;
+
     }
 }
