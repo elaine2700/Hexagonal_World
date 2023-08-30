@@ -23,11 +23,16 @@ public class HexGrid : MonoBehaviour
     [SerializeField] float maskRadius = 20f;
     [SerializeField] bool mask = false;
     [SerializeField] Material waterMaterial;
-    
+
+    [Header("Trees")]
+    [SerializeField] Tree treePrefab;
+    [SerializeField] float treeMinRange = 0.3f;
+    [SerializeField] float treeMaxRange = 0.8f;
 
     public void UpdateGrid()
     {
         Debug.Log("Update Grid");
+        ClearTrees();
         ClearHexagons();
         LayoutGrid();
     }
@@ -56,6 +61,7 @@ public class HexGrid : MonoBehaviour
             for (int x = 0; x < gridSize.x; x++)
             {
                 
+                // Creating the mask.
                 GameObject tile = new GameObject($"Hex {x},{y}", typeof(HexTile));
                 tile.transform.position = GetPositionForHexFromCoordinate(new Vector2Int(x, y)) 
                     + new Vector3(-((maskRadius) + 0),
@@ -71,25 +77,32 @@ public class HexGrid : MonoBehaviour
                     }
                 }
 
-
                 HexTile tileRenderer = tile.GetComponent<HexTile>();
                 tileRenderer.isFlatTopped = isFlatTopped;
                 tileRenderer.outerSize = outerSize;
                 tileRenderer.innerSize = innerSize;
 
                 // Add a random value to height
-                //float randomHeight = Random.Range(0, maxHeight);
 
-                // Random value with Perlin Noise
-
+                // Setting hexagon's height with Perlin Noise.
                 float randomHeight = GenerateHeight(x, y, noiseDetail, tile) * maxHeight ;
-                Debug.Log($"{x}, {y} tile: Height: {randomHeight}");
-
                 tileRenderer.height = randomHeight;
 
                 // Asign material based on height.
                 // Mapping the range.
-                int materialIndex = Mathf.FloorToInt( Mathf.Lerp(0, materials.Length, randomHeight/maxHeight) );
+                float percentageHeight = randomHeight / maxHeight;
+                int materialIndex = Mathf.FloorToInt( Mathf.Lerp(0, materials.Length, percentageHeight) );
+
+                // Place trees on hexagons based on height.
+                // If height is within treeRange, try placing tree.
+                if(percentageHeight >= treeMinRange && percentageHeight <= treeMaxRange)
+                {
+                    Tree tree = Instantiate(treePrefab, this.transform);
+                    tree.PlaceOnPosition(new Vector3(
+                        tile.transform.position.x,
+                        tile.transform.position.y + randomHeight,
+                        tile.transform.position.z));
+                }
 
                 Debug.Log($"Material Index {materialIndex}");
                 tileRenderer.material = materials[materialIndex];
@@ -135,8 +148,6 @@ public class HexGrid : MonoBehaviour
             xPosition = (column * horizontalDistance) + offset;
             // Place tile based on the currentRow
             yPosition = row * verticalDistance;
-
-            
         }
         else
         {
@@ -161,17 +172,32 @@ public class HexGrid : MonoBehaviour
     private void ClearHexagons()
     {
         HexTile[] hexagons = GetComponentsInChildren<HexTile>();
-        foreach (HexTile tile in hexagons)
+        foreach (HexTile hex in hexagons)
         {
             if (Application.isPlaying)
             {
-                Destroy(tile.gameObject);
+                Destroy(hex.gameObject);
             }
             else
             {
-                DestroyImmediate(tile.gameObject);
+                DestroyImmediate(hex.gameObject);
             }
-            
+        }
+    }
+
+    private void ClearTrees()
+    {
+        Tree[] trees = GetComponentsInChildren<Tree>();
+        foreach(Tree tree in trees)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(tree.gameObject);
+            }
+            else
+            {
+                DestroyImmediate(tree.gameObject);
+            }
         }
     }
 
@@ -181,7 +207,6 @@ public class HexGrid : MonoBehaviour
         float yNoise = (y + tile.transform.position.y) / detailScale;
         
         return Mathf.PerlinNoise(xNoise, yNoise);
-
     }
 
     private bool IsPointInsideMask(Vector3 pos)
@@ -196,6 +221,10 @@ public class HexGrid : MonoBehaviour
         Debug.Log("Not THis point hit something");
         return false;
     }
-    
-    
+
+    private bool WillPlaceTree()
+    {
+        int random = Mathf.RoundToInt(Random.Range(0, 2));
+        return random == 0;
+    }
 }
